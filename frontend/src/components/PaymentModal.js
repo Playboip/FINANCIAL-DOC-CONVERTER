@@ -73,7 +73,7 @@ const PaymentModal = ({ isOpen, onClose }) => {
         'Custom analysis templates',
         'Priority phone support'
       ],
-      stripeLink: 'https://buy.stripe.com/test_your_business_link_here', // Replace with your actual link
+      stripeLink: 'https://buy.stripe.com/7sY6oH1gw1Psdeu0e25AQ0U', // FDC Business Plan
       savings: 'Save $180/year'
     }
   };
