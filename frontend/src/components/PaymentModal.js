@@ -57,7 +57,7 @@ const PaymentModal = ({ isOpen, onClose }) => {
         'Email support'
       ],
       popular: true,
-      stripeLink: 'https://buy.stripe.com/test_your_pro_link_here', // Replace with your actual link
+      stripeLink: 'https://buy.stripe.com/6oUaEXgbqdya1vM6Cq5AQ0T', // FDC Pro Plan
       savings: 'Save $60/year'
     },
     business: {
