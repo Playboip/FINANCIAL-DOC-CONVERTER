@@ -45,7 +45,8 @@ const PaymentModal = ({ isOpen, onClose }) => {
     },
     pro: {
       name: 'Pro',
-      price: '$9.99',
+      price: '$4.99',
+      originalPrice: '$9.99',
       period: 'per month',
       features: [
         'Unlimited document conversions',
@@ -56,11 +57,13 @@ const PaymentModal = ({ isOpen, onClose }) => {
         'Email support'
       ],
       popular: true,
-      stripeLink: 'https://buy.stripe.com/test_your_pro_link_here'
+      stripeLink: 'https://buy.stripe.com/test_your_pro_link_here', // Replace with your actual link
+      savings: 'Save $60/year'
     },
     business: {
       name: 'Business',
-      price: '$29.99',
+      price: '$14.99',
+      originalPrice: '$29.99',
       period: 'per month',
       features: [
         'Everything in Pro',
@@ -70,7 +73,8 @@ const PaymentModal = ({ isOpen, onClose }) => {
         'Custom analysis templates',
         'Priority phone support'
       ],
-      stripeLink: 'https://buy.stripe.com/test_your_business_link_here'
+      stripeLink: 'https://buy.stripe.com/test_your_business_link_here', // Replace with your actual link
+      savings: 'Save $180/year'
     }
   };
 
