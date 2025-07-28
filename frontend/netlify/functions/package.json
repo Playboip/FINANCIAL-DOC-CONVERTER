@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "Netlify Functions for FinanceFlow",
   "dependencies": {
-    "openai": "^4.0.0"
+    "openai": "^4.0.0",
+    "parse-multipart-data": "^1.5.0"
   }
 }
