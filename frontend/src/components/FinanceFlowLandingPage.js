@@ -156,10 +156,7 @@ const FinanceFlowLandingPage = () => {
         FileProcessor.downloadFile(result);
         
         // Update usage tracking
-        setDailyUsage(prev => ({ 
-          ...prev, 
-          conversions: prev.conversions + 1 
-        }));
+        updateUsage('conversion');
         
         // Track conversion event
         if (window.posthog) {
