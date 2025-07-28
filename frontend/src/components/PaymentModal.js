@@ -4,6 +4,31 @@ import { X, Check, Star, Zap, Shield, Crown } from 'lucide-react';
 
 const PaymentModal = ({ isOpen, onClose }) => {
   const [selectedPlan, setSelectedPlan] = useState('pro');
+  const [timeLeft, setTimeLeft] = useState('');
+
+  // Create urgency with countdown timer
+  React.useEffect(() => {
+    const calculateTimeLeft = () => {
+      const now = new Date();
+      const endOfDay = new Date();
+      endOfDay.setHours(23, 59, 59, 999);
+      const diff = endOfDay - now;
+      
+      const hours = Math.floor(diff / (1000 * 60 * 60));
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      
+      return `${hours}h ${minutes}m`;
+    };
+
+    if (isOpen) {
+      setTimeLeft(calculateTimeLeft());
+      const timer = setInterval(() => {
+        setTimeLeft(calculateTimeLeft());
+      }, 60000); // Update every minute
+
+      return () => clearInterval(timer);
+    }
+  }, [isOpen]);
 
   const plans = {
     free: {
