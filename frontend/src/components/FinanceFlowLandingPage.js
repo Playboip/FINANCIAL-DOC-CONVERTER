@@ -19,9 +19,12 @@ import {
   Clock,
   Target,
   Loader,
-  AlertCircle
+  AlertCircle,
+  Crown,
+  Lock
 } from 'lucide-react';
 import { FileProcessor, AIAnalysisService } from '../utils/fileProcessor';
+import PaymentModal from './PaymentModal';
 
 const FinanceFlowLandingPage = () => {
   const [dragActive, setDragActive] = useState(false);
@@ -29,7 +32,28 @@ const FinanceFlowLandingPage = () => {
   const [processing, setProcessing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState(null);
   const [showAnalysis, setShowAnalysis] = useState(false);
-  const [selectedConversion, setSelectedConversion] = useState('');
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  
+  // Usage tracking (in real app, this would be stored in localStorage or backend)
+  const [dailyUsage, setDailyUsage] = useState({
+    conversions: 0,
+    analyses: 0,
+    date: new Date().toDateString()
+  });
+  
+  // Check if user has exceeded free limits
+  const hasExceededLimits = (action) => {
+    const today = new Date().toDateString();
+    if (dailyUsage.date !== today) {
+      // Reset daily usage for new day
+      setDailyUsage({ conversions: 0, analyses: 0, date: today });
+      return false;
+    }
+    
+    if (action === 'conversion' && dailyUsage.conversions >= 3) return true;
+    if (action === 'analysis' && dailyUsage.analyses >= 1) return true;
+    return false;
+  };
   
   // Animation refs
   const heroRef = useRef(null);
@@ -79,6 +103,12 @@ const FinanceFlowLandingPage = () => {
       return;
     }
 
+    // Check free tier limits
+    if (hasExceededLimits('conversion')) {
+      setShowPaymentModal(true);
+      return;
+    }
+
     setProcessing(true);
     try {
       const conversions = FileProcessor.getSupportedConversions(uploadedFile.name);
@@ -102,6 +132,20 @@ const FinanceFlowLandingPage = () => {
 
       if (result) {
         FileProcessor.downloadFile(result);
+        
+        // Update usage tracking
+        setDailyUsage(prev => ({ 
+          ...prev, 
+          conversions: prev.conversions + 1 
+        }));
+        
+        // Track conversion event
+        if (window.posthog) {
+          window.posthog.capture('document_converted', {
+            file_type: uploadedFile.name.split('.').pop(),
+            target_format: targetFormat
+          });
+        }
       }
     } catch (error) {
       console.error('Conversion error:', error);
@@ -118,11 +162,31 @@ const FinanceFlowLandingPage = () => {
       return;
     }
 
+    // Check free tier limits
+    if (hasExceededLimits('analysis')) {
+      setShowPaymentModal(true);
+      return;
+    }
+
     setProcessing(true);
     try {
       const analysis = await AIAnalysisService.analyzeDocument(uploadedFile);
       setAnalysisResult(analysis);
       setShowAnalysis(true);
+      
+      // Update usage tracking
+      setDailyUsage(prev => ({ 
+        ...prev, 
+        analyses: prev.analyses + 1 
+      }));
+      
+      // Track analysis event
+      if (window.posthog) {
+        window.posthog.capture('document_analyzed', {
+          file_type: uploadedFile.name.split('.').pop(),
+          file_size: uploadedFile.size
+        });
+      }
     } catch (error) {
       console.error('Analysis error:', error);
       alert('Analysis failed. Please try again.');
@@ -133,6 +197,12 @@ const FinanceFlowLandingPage = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-800">
+      {/* Payment Modal */}
+      <PaymentModal 
+        isOpen={showPaymentModal} 
+        onClose={() => setShowPaymentModal(false)} 
+      />
+      
       {/* Hero Section */}
       <section ref={heroRef} className="relative min-h-screen flex items-center justify-center overflow-hidden">
         {/* Background Image with Overlay */}
@@ -153,6 +223,25 @@ const FinanceFlowLandingPage = () => {
             transition={{ duration: 0.8 }}
             className="max-w-4xl mx-auto"
           >
+            {/* Upgrade Button */}
+            <motion.div
+              initial={{ opacity: 0, y: -20 }}
+              animate={heroInView ? { opacity: 1, y: 0 } : {}}
+              transition={{ duration: 0.6, delay: 0.1 }}
+              className="mb-6"
+            >
+              <button
+                onClick={() => setShowPaymentModal(true)}
+                className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-black font-semibold rounded-full shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
+              >
+                <Crown className="w-5 h-5" />
+                Upgrade to Pro
+                <span className="bg-yellow-700 text-yellow-100 px-2 py-1 rounded-full text-xs ml-2">
+                  50% OFF
+                </span>
+              </button>
+            </motion.div>
+
             {/* Brand Logo */}
             <motion.div
               initial={{ opacity: 0, scale: 0.8 }}
@@ -167,6 +256,24 @@ const FinanceFlowLandingPage = () => {
                 Transform Your Financial Documents with AI-Powered Intelligence
               </p>
             </motion.div>
+
+            {/* Usage Stats */}
+            {(dailyUsage.conversions > 0 || dailyUsage.analyses > 0) && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mb-6 flex justify-center gap-6 text-sm"
+              >
+                <div className="bg-slate-800/50 backdrop-blur-md px-4 py-2 rounded-xl border border-slate-700/50">
+                  <span className="text-gray-400">Conversions today: </span>
+                  <span className="text-blue-400 font-semibold">{dailyUsage.conversions}/3</span>
+                </div>
+                <div className="bg-slate-800/50 backdrop-blur-md px-4 py-2 rounded-xl border border-slate-700/50">
+                  <span className="text-gray-400">Analyses today: </span>
+                  <span className="text-yellow-400 font-semibold">{dailyUsage.analyses}/1</span>
+                </div>
+              </motion.div>
+            )}
 
             {/* Main Headline */}
             <motion.h2
@@ -247,21 +354,33 @@ const FinanceFlowLandingPage = () => {
               <button 
                 onClick={handleConvert}
                 disabled={!uploadedFile || processing}
-                className="group px-8 py-4 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 disabled:from-gray-600 disabled:to-gray-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 disabled:scale-100 disabled:cursor-not-allowed flex items-center gap-3"
+                className="group relative px-8 py-4 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 disabled:from-gray-600 disabled:to-gray-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 disabled:scale-100 disabled:cursor-not-allowed flex items-center gap-3"
               >
+                {hasExceededLimits('conversion') && !processing && <Lock className="w-4 h-4" />}
                 {processing ? <Loader className="w-5 h-5 animate-spin" /> : <Download className="w-5 h-5" />}
                 Convert Document
                 <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+                {hasExceededLimits('conversion') && (
+                  <span className="absolute -top-2 -right-2 bg-yellow-400 text-black text-xs px-2 py-1 rounded-full">
+                    PRO
+                  </span>
+                )}
               </button>
               
               <button 
                 onClick={handleAnalyze}
                 disabled={!uploadedFile || processing}
-                className="group px-8 py-4 bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 disabled:from-gray-600 disabled:to-gray-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 disabled:scale-100 disabled:cursor-not-allowed flex items-center gap-3"
+                className="group relative px-8 py-4 bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 disabled:from-gray-600 disabled:to-gray-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 disabled:scale-100 disabled:cursor-not-allowed flex items-center gap-3"
               >
+                {hasExceededLimits('analysis') && !processing && <Lock className="w-4 h-4" />}
                 {processing ? <Loader className="w-5 h-5 animate-spin" /> : <Eye className="w-5 h-5" />}
                 AI Analysis
                 <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+                {hasExceededLimits('analysis') && (
+                  <span className="absolute -top-2 -right-2 bg-yellow-400 text-black text-xs px-2 py-1 rounded-full">
+                    PRO
+                  </span>
+                )}
               </button>
             </motion.div>
 
