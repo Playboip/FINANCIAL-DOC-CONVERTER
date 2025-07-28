@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Check, Star, Zap, Shield, Crown } from 'lucide-react';
+import { X, Check, Star, Zap, Shield, Crown, Clock, Users } from 'lucide-react';
 
 const PaymentModal = ({ isOpen, onClose }) => {
   const [selectedPlan, setSelectedPlan] = useState('pro');
