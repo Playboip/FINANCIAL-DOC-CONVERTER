@@ -17,12 +17,19 @@ import {
   Download,
   Eye,
   Clock,
-  Target
+  Target,
+  Loader,
+  AlertCircle
 } from 'lucide-react';
+import { FileProcessor, AIAnalysisService } from '../utils/fileProcessor';
 
 const FinanceFlowLandingPage = () => {
   const [dragActive, setDragActive] = useState(false);
   const [uploadedFile, setUploadedFile] = useState(null);
+  const [processing, setProcessing] = useState(false);
+  const [analysisResult, setAnalysisResult] = useState(null);
+  const [showAnalysis, setShowAnalysis] = useState(false);
+  const [selectedConversion, setSelectedConversion] = useState('');
   
   // Animation refs
   const heroRef = useRef(null);
@@ -52,12 +59,75 @@ const FinanceFlowLandingPage = () => {
     setDragActive(false);
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       setUploadedFile(e.dataTransfer.files[0]);
+      setAnalysisResult(null);
+      setShowAnalysis(false);
     }
   };
 
   const handleFileInput = (e) => {
     if (e.target.files && e.target.files[0]) {
       setUploadedFile(e.target.files[0]);
+      setAnalysisResult(null);
+      setShowAnalysis(false);
+    }
+  };
+
+  // Convert document
+  const handleConvert = async () => {
+    if (!uploadedFile) {
+      alert('Please upload a file first');
+      return;
+    }
+
+    setProcessing(true);
+    try {
+      const conversions = FileProcessor.getSupportedConversions(uploadedFile.name);
+      
+      if (conversions.length === 0) {
+        alert('File format not supported for conversion');
+        return;
+      }
+
+      // For demo, convert to first available format
+      const targetFormat = conversions[0];
+      let result;
+
+      if (targetFormat.includes('Excel')) {
+        result = await FileProcessor.csvToExcel(uploadedFile);
+      } else if (targetFormat.includes('CSV')) {
+        result = await FileProcessor.excelToCsv(uploadedFile);
+      } else if (targetFormat.includes('JSON')) {
+        result = await FileProcessor.toJson(uploadedFile);
+      }
+
+      if (result) {
+        FileProcessor.downloadFile(result);
+      }
+    } catch (error) {
+      console.error('Conversion error:', error);
+      alert('Conversion failed. Please try again.');
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  // Analyze document
+  const handleAnalyze = async () => {
+    if (!uploadedFile) {
+      alert('Please upload a file first');
+      return;
+    }
+
+    setProcessing(true);
+    try {
+      const analysis = await AIAnalysisService.analyzeDocument(uploadedFile);
+      setAnalysisResult(analysis);
+      setShowAnalysis(true);
+    } catch (error) {
+      console.error('Analysis error:', error);
+      alert('Analysis failed. Please try again.');
+    } finally {
+      setProcessing(false);
     }
   };
 
@@ -149,6 +219,9 @@ const FinanceFlowLandingPage = () => {
                     <div className="space-y-2">
                       <p className="text-green-400 font-semibold">File uploaded!</p>
                       <p className="text-gray-300 text-sm">{uploadedFile.name}</p>
+                      <p className="text-gray-400 text-xs">
+                        {(uploadedFile.size / 1024).toFixed(2)} KB
+                      </p>
                     </div>
                   ) : (
                     <div>
@@ -171,18 +244,69 @@ const FinanceFlowLandingPage = () => {
               transition={{ duration: 0.8, delay: 1.0 }}
               className="flex flex-col sm:flex-row gap-4 justify-center items-center"
             >
-              <button className="group px-8 py-4 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 flex items-center gap-3">
-                <Download className="w-5 h-5" />
+              <button 
+                onClick={handleConvert}
+                disabled={!uploadedFile || processing}
+                className="group px-8 py-4 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 disabled:from-gray-600 disabled:to-gray-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 disabled:scale-100 disabled:cursor-not-allowed flex items-center gap-3"
+              >
+                {processing ? <Loader className="w-5 h-5 animate-spin" /> : <Download className="w-5 h-5" />}
                 Convert Document
                 <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
               </button>
               
-              <button className="group px-8 py-4 bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 flex items-center gap-3">
-                <Eye className="w-5 h-5" />
+              <button 
+                onClick={handleAnalyze}
+                disabled={!uploadedFile || processing}
+                className="group px-8 py-4 bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 disabled:from-gray-600 disabled:to-gray-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 disabled:scale-100 disabled:cursor-not-allowed flex items-center gap-3"
+              >
+                {processing ? <Loader className="w-5 h-5 animate-spin" /> : <Eye className="w-5 h-5" />}
                 AI Analysis
                 <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
               </button>
             </motion.div>
+
+            {/* Analysis Results */}
+            {showAnalysis && analysisResult && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5 }}
+                className="mt-12 max-w-4xl mx-auto"
+              >
+                <div className="bg-slate-800/80 backdrop-blur-md rounded-2xl p-8 border border-slate-700/50">
+                  <h3 className="text-2xl font-bold text-white mb-6 flex items-center gap-3">
+                    <BarChart3 className="w-6 h-6 text-yellow-400" />
+                    {analysisResult.summary}
+                  </h3>
+                  
+                  <div className="grid md:grid-cols-2 gap-6">
+                    {analysisResult.insights.map((insight, index) => (
+                      <div key={index} className="space-y-3">
+                        <h4 className="text-lg font-semibold text-blue-300">{insight.category}</h4>
+                        <ul className="space-y-2">
+                          {insight.items.map((item, itemIndex) => (
+                            <li key={itemIndex} className="text-gray-300 flex items-start gap-2">
+                              <CheckCircle className="w-4 h-4 text-green-400 mt-0.5 flex-shrink-0" />
+                              <span className="text-sm">{item}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ))}
+                  </div>
+                  
+                  {analysisResult.fileInfo && (
+                    <div className="mt-6 pt-6 border-t border-slate-700/50">
+                      <div className="flex flex-wrap gap-4 text-sm text-gray-400">
+                        <span>File: {analysisResult.fileInfo.name}</span>
+                        <span>Size: {analysisResult.fileInfo.size}</span>
+                        <span>Processed: {analysisResult.fileInfo.processedAt}</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            )}
 
             {/* Trust Indicators */}
             <motion.div
@@ -193,11 +317,11 @@ const FinanceFlowLandingPage = () => {
             >
               <div className="flex items-center gap-2">
                 <Shield className="w-5 h-5 text-green-400" />
-                <span>Bank-Grade Security</span>
+                <span>Client-Side Processing</span>
               </div>
               <div className="flex items-center gap-2">
                 <Zap className="w-5 h-5 text-yellow-400" />
-                <span>Instant Processing</span>
+                <span>Instant Results</span>
               </div>
               <div className="flex items-center gap-2">
                 <Award className="w-5 h-5 text-blue-400" />
