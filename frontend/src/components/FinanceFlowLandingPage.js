@@ -35,10 +35,19 @@ const FinanceFlowLandingPage = () => {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   
   // Usage tracking (in real app, this would be stored in localStorage or backend)
-  const [dailyUsage, setDailyUsage] = useState({
-    conversions: 0,
-    analyses: 0,
-    date: new Date().toDateString()
+  const [dailyUsage, setDailyUsage] = useState(() => {
+    const today = new Date().toDateString();
+    const stored = localStorage.getItem('financeflow_usage');
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      if (parsed.date === today) {
+        return parsed;
+      }
+    }
+    // Reset for new day
+    const newUsage = { conversions: 0, analyses: 0, date: today };
+    localStorage.setItem('financeflow_usage', JSON.stringify(newUsage));
+    return newUsage;
   });
   
   // Check if user has exceeded free limits
@@ -46,13 +55,26 @@ const FinanceFlowLandingPage = () => {
     const today = new Date().toDateString();
     if (dailyUsage.date !== today) {
       // Reset daily usage for new day
-      setDailyUsage({ conversions: 0, analyses: 0, date: today });
+      const newUsage = { conversions: 0, analyses: 0, date: today };
+      setDailyUsage(newUsage);
+      localStorage.setItem('financeflow_usage', JSON.stringify(newUsage));
       return false;
     }
     
     if (action === 'conversion' && dailyUsage.conversions >= 3) return true;
     if (action === 'analysis' && dailyUsage.analyses >= 1) return true;
     return false;
+  };
+
+  // Update usage and save to localStorage
+  const updateUsage = (action) => {
+    const newUsage = {
+      ...dailyUsage,
+      [action === 'conversion' ? 'conversions' : 'analyses']: 
+        dailyUsage[action === 'conversion' ? 'conversions' : 'analyses'] + 1
+    };
+    setDailyUsage(newUsage);
+    localStorage.setItem('financeflow_usage', JSON.stringify(newUsage));
   };
   
   // Animation refs
