@@ -106,11 +106,20 @@ const PaymentModal = ({ isOpen, onClose }) => {
             className="bg-slate-900 rounded-3xl p-8 max-w-4xl w-full max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Header */}
-            <div className="flex items-center justify-between mb-8">
+            {/* Header with Urgency */}
+            <div className="flex items-center justify-between mb-6">
               <div>
-                <h2 className="text-3xl font-bold text-white mb-2">Choose Your Plan</h2>
-                <p className="text-gray-400">Unlock the full power of FinanceFlow</p>
+                <div className="flex items-center gap-3 mb-2">
+                  <h2 className="text-3xl font-bold text-white">Limited Time Offer</h2>
+                  <div className="bg-red-500 text-white px-3 py-1 rounded-full text-sm font-bold animate-pulse">
+                    50% OFF
+                  </div>
+                </div>
+                <p className="text-gray-400">Unlock unlimited document processing power</p>
+                <div className="flex items-center gap-2 mt-2 text-yellow-400">
+                  <Clock className="w-4 h-4" />
+                  <span className="text-sm font-semibold">Expires in {timeLeft}</span>
+                </div>
               </div>
               <button
                 onClick={onClose}
@@ -118,6 +127,14 @@ const PaymentModal = ({ isOpen, onClose }) => {
               >
                 <X className="w-6 h-6 text-gray-400" />
               </button>
+            </div>
+
+            {/* Social Proof Banner */}
+            <div className="bg-gradient-to-r from-green-600/20 to-blue-600/20 border border-green-500/30 rounded-xl p-4 mb-8">
+              <div className="flex items-center justify-center gap-2 text-green-400">
+                <Users className="w-5 h-5" />
+                <span className="font-semibold">2,847 users upgraded in the last 30 days</span>
+              </div>
             </div>
 
             {/* Plans */}
