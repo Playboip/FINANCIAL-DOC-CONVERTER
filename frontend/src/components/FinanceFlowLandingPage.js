@@ -273,23 +273,25 @@ const FinanceFlowLandingPage = () => {
               </p>
             </motion.div>
 
-            {/* Usage Stats */}
-            {(dailyUsage.conversions > 0 || dailyUsage.analyses > 0) && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="mb-6 flex justify-center gap-6 text-sm"
-              >
-                <div className="bg-slate-800/50 backdrop-blur-md px-4 py-2 rounded-xl border border-slate-700/50">
-                  <span className="text-gray-400">Conversions today: </span>
-                  <span className="text-blue-400 font-semibold">{dailyUsage.conversions}/3</span>
-                </div>
-                <div className="bg-slate-800/50 backdrop-blur-md px-4 py-2 rounded-xl border border-slate-700/50">
-                  <span className="text-gray-400">Analyses today: </span>
-                  <span className="text-yellow-400 font-semibold">{dailyUsage.analyses}/1</span>
-                </div>
-              </motion.div>
-            )}
+            {/* Usage Stats - Always Visible for Conversion */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-6 flex justify-center gap-6 text-sm"
+            >
+              <div className="bg-slate-800/50 backdrop-blur-md px-4 py-2 rounded-xl border border-slate-700/50">
+                <span className="text-gray-400">Free conversions: </span>
+                <span className={`font-semibold ${dailyUsage.conversions >= 2 ? 'text-yellow-400' : 'text-blue-400'}`}>
+                  {3 - dailyUsage.conversions} left today
+                </span>
+              </div>
+              <div className="bg-slate-800/50 backdrop-blur-md px-4 py-2 rounded-xl border border-slate-700/50">
+                <span className="text-gray-400">Free analyses: </span>
+                <span className={`font-semibold ${dailyUsage.analyses >= 1 ? 'text-red-400' : 'text-yellow-400'}`}>
+                  {1 - dailyUsage.analyses} left today
+                </span>
+              </div>
+            </motion.div>
 
             {/* Main Headline */}
             <motion.h2
