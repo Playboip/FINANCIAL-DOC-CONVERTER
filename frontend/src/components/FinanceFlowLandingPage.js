@@ -194,10 +194,7 @@ const FinanceFlowLandingPage = () => {
       setShowAnalysis(true);
       
       // Update usage tracking
-      setDailyUsage(prev => ({ 
-        ...prev, 
-        analyses: prev.analyses + 1 
-      }));
+      updateUsage('analysis');
       
       // Track analysis event
       if (window.posthog) {
