@@ -731,7 +731,7 @@ const FinanceFlowLandingPage = () => {
             </p>
             
             <div className="flex justify-center items-center gap-8 text-gray-400 text-sm">
-              <span>© 2025 FinanceFlow. All rights reserved.</span>
+              <span>© 2025 FinancialDocConverter. All rights reserved.</span>
               <span>•</span>
               <a href="#" className="hover:text-white transition-colors">Privacy Policy</a>
               <span>•</span>
