@@ -724,7 +724,7 @@ const FinanceFlowLandingPage = () => {
         <div className="container mx-auto px-6">
           <div className="text-center">
             <h3 className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent mb-4">
-              FinanceFlow
+              FinancialDocConverter
             </h3>
             <p className="text-gray-400 mb-8">
               Transform Your Financial Documents with AI-Powered Intelligence
