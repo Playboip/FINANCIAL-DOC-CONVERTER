@@ -634,7 +634,7 @@ const FinanceFlowLandingPage = () => {
               Trusted by <span className="text-yellow-400">Professionals</span>
             </h2>
             <p className="text-xl text-gray-300 max-w-2xl mx-auto">
-              See what our users say about FinanceFlow and how it's transforming their financial workflow.
+              See what our users say about FinancialDocConverter and how it's transforming their financial workflow.
             </p>
           </motion.div>
 
