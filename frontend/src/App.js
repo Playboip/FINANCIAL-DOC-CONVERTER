@@ -9,7 +9,7 @@ function App() {
       <div className="container mx-auto px-4 py-8">
         <div className="text-center">
           <h1 className="text-4xl font-bold text-blue-600 mb-4">
-            FinanceFlow
+            FinancialDocConverter
           </h1>
           <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
             ✅ React App is loading successfully!
