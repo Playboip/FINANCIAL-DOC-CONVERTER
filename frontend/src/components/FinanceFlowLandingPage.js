@@ -645,7 +645,7 @@ const FinanceFlowLandingPage = () => {
                 role: "Financial Analyst",
                 company: "Tech Innovations Inc.",
                 image: "https://images.unsplash.com/photo-1496180470114-6ef490f3ff22?q=80&w=400",
-                testimonial: "FinanceFlow has completely transformed how I handle financial documents. The AI analysis is incredibly accurate and saves me hours of manual work every week.",
+                testimonial: "FinancialDocConverter has completely transformed how I handle financial documents. The AI analysis is incredibly accurate and saves me hours of manual work every week.",
                 rating: 5
               },
               {
