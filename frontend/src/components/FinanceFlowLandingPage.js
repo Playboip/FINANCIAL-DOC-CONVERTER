@@ -704,7 +704,7 @@ const FinanceFlowLandingPage = () => {
               <span className="text-yellow-400"> Financial Documents?</span>
             </h2>
             <p className="text-xl text-gray-300 mb-8 max-w-2xl mx-auto">
-              Join thousands of professionals who trust FinanceFlow for their document conversion and analysis needs.
+              Join thousands of professionals who trust FinancialDocConverter for their document conversion and analysis needs.
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
