@@ -52,6 +52,26 @@ async def get_status_checks():
     status_checks = await db.status_checks.find().to_list(1000)
     return [StatusCheck(**status_check) for status_check in status_checks]
 
+import io
+from fastapi import UploadFile, File
+from pypdf import PdfReader
+
+@api_router.post("/upload-pdf")
+async def upload_pdf(file: UploadFile = File(...)):
+    try:
+        # Read the PDF file
+        pdf_content = await file.read()
+        pdf_reader = PdfReader(io.BytesIO(pdf_content))
+
+        # Extract text
+        text = ""
+        for page in pdf_reader.pages:
+            text += page.extract_text() or ""
+
+        return {"text": text}
+    except Exception as e:
+        return {"error": str(e)}
+
 # Include the router in the main app
 app.include_router(api_router)
 
