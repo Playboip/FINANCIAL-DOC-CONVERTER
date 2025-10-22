@@ -10,6 +10,8 @@ import shutil
 # -----------------------------
 # Explicitly fetch the remote MONGO_URL set on the Railway dashboard
 MONGO_URL = os.getenv("MONGO_URL")
+# --- FINAL FIX: Explicitly set the database name based on your choice ---
+DB_NAME = "FDC" 
 STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY")
 
 # --- CRITICAL CHECK: Ensure the remote variable is loaded ---
@@ -33,9 +35,9 @@ print("✅ Stripe secret key loaded successfully.")
 try:
     # Attempt to initialize the Motor client using the confirmed remote MONGO_URL
     client = AsyncIOMotorClient(MONGO_URL)
-    # Use get_default_database(), which relies on the database name being in the URI
-    db = client.get_default_database()
-    print("✅ MongoDB connected successfully using remote URI.")
+    # --- Using the explicit database name: FDC ---
+    db = client[DB_NAME] 
+    print(f"✅ MongoDB connected successfully to database: {DB_NAME}.")
 except Exception as e:
     # If connection fails (e.g., credentials or network issue), provide details
     raise RuntimeError(
