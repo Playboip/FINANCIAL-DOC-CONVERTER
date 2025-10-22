@@ -15,9 +15,9 @@ ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
 # MongoDB connection
-mongo_url = os.environ['MONGO_URL']
+mongo_url = mongodb://mongo:ZVabyQUyjtzAwZVYvRkOhwNSZFXuODYS@mongodb.railway.internal:27017]
 client = AsyncIOMotorClient(mongo_url)
-db = client[os.environ['DB_NAME']]
+db = client[os.environ[financialdocconverter]]
 
 # Create the main app without a prefix
 app = FastAPI()
