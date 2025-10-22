@@ -1,80 +1,78 @@
-from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
-from motor.motor_asyncio import AsyncIOMotorClient
 import os
-import uvicorn
+from fastapi import FastAPI, HTTPException
+from motor.motor_asyncio import AsyncIOMotorClient
 import stripe
 
-# -------------------------------
-# Environment Variables
-# -------------------------------
-MONGO_URL = os.getenv(
-    "MONGO_URL",
-    "mongodb://mongo:ZVabyQUyjtzAwZVYvRkOhwNSZFXuODYS@mongodb.railway.internal:27017"
-)
-DB_NAME = os.getenv("DB_NAME", "test_database")
+# --------------------------
+# CONFIGURATION
+# --------------------------
+# Railway dynamic port
+PORT = int(os.getenv("PORT", 8000))
 
-STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY", "sk_test_...")
-STRIPE_SUCCESS_URL = os.getenv("STRIPE_SUCCESS_URL", "https://example.com/success")
-STRIPE_CANCEL_URL = os.getenv("STRIPE_CANCEL_URL", "https://example.com/cancel")
+# Stripe API key from Railway env
+STRIPE_API_KEY = os.getenv("STRIPE_API_KEY")
+if not STRIPE_API_KEY:
+    raise ValueError("STRIPE_API_KEY not set in environment")
+stripe.api_key = STRIPE_API_KEY
 
-# -------------------------------
-# FastAPI App
-# -------------------------------
-app = FastAPI(title="FastAPI + MongoDB + Stripe on Railway")
+# MongoDB connection
+raw_mongo_url = os.getenv("MONGO_URL")
+if not raw_mongo_url:
+    raise ValueError("MONGO_URL environment variable not set in Railway.")
 
-# -------------------------------
-# MongoDB Setup
-# -------------------------------
-client = AsyncIOMotorClient(MONGO_URL)
-db = client[DB_NAME]
+# Self-healing URI
+if not raw_mongo_url.startswith("mongodb://") and not raw_mongo_url.startswith("mongodb+srv://"):
+    raw_mongo_url = f"mongodb://{raw_mongo_url}"
 
-# -------------------------------
-# Stripe Setup
-# -------------------------------
-stripe.api_key = STRIPE_SECRET_KEY
+# Default database name
+DB_NAME = os.getenv("DB_NAME", "mydatabase")
+if "/" not in raw_mongo_url.split("@")[-1]:
+    raw_mongo_url += f"/{DB_NAME}"
 
-# -------------------------------
-# Routes
-# -------------------------------
-@app.get("/")
-async def root():
-    return {"message": "Backend running successfully"}
+print(f"Connecting to MongoDB at: {raw_mongo_url}")
 
-@app.get("/test-mongo")
-async def test_mongo():
-    try:
-        collections = await db.list_collection_names()
-        return {"status": "MongoDB connected", "collections": collections}
-    except Exception as e:
-        return {"status": "Error connecting to MongoDB", "detail": str(e)}
+client = AsyncIOMotorClient(raw_mongo_url)
+db = client.get_default_database()
 
+# --------------------------
+# FASTAPI APP
+# --------------------------
+app = FastAPI(title="Railway FastAPI Backend")
+
+# --------------------------
+# TEST ROUTE
+# --------------------------
+@app.get("/health")
+async def health_check():
+    return {"status": "ok", "db": DB_NAME}
+
+# --------------------------
+# SAMPLE STRIPE ROUTE
+# --------------------------
 @app.post("/create-checkout-session")
-async def create_checkout_session(request: Request):
-    data = await request.json()
+async def create_checkout_session():
     try:
-        # Example: expects {"amount": 1000, "currency": "usd"} from frontend
         session = stripe.checkout.Session.create(
             payment_method_types=["card"],
             line_items=[{
                 "price_data": {
-                    "currency": data.get("currency", "usd"),
-                    "product_data": {"name": "Example Product"},
-                    "unit_amount": data.get("amount", 1000),
+                    "currency": "usd",
+                    "product_data": {"name": "Test Product"},
+                    "unit_amount": 500,
                 },
                 "quantity": 1,
             }],
             mode="payment",
-            success_url=STRIPE_SUCCESS_URL,
-            cancel_url=STRIPE_CANCEL_URL,
+            success_url="https://example.com/success",
+            cancel_url="https://example.com/cancel",
         )
-        return JSONResponse({"id": session.id, "url": session.url})
+        return {"id": session.id}
     except Exception as e:
-        return JSONResponse({"error": str(e)}, status_code=400)
+        raise HTTPException(status_code=400, detail=str(e))
 
-# -------------------------------
-# Dynamic Port for Railway
-# -------------------------------
+# --------------------------
+# RUN UVICORN IF MAIN
+# --------------------------
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 8000))
-    uvicorn.run("server:app", host="0.0.0.0", port=port)
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=PORT)
