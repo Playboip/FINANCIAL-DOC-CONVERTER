@@ -8,14 +8,20 @@ import shutil
 # -----------------------------
 # Environment variables
 # -----------------------------
+# Explicitly fetch the remote MONGO_URL set on the Railway dashboard
 MONGO_URL = os.getenv("MONGO_URL")
 STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY")
 
-if not MONGO_URL:
-    # This will typically be caught by the deployment environment if not set
-    raise ValueError("MONGO_URL not set in environment")
+# --- CRITICAL CHECK: Ensure the remote variable is loaded ---
+if not MONGO_URL or "localhost" in MONGO_URL or "127.0.0.1" in MONGO_URL:
+    # If it's missing or still contains a local value, raise a clear error
+    raise ValueError(
+        "MONGO_URL is either not set or still points to 'localhost'. "
+        "You MUST set the environment variable on your Railway service to the correct remote URI (e.g., mongodb://mongo:***@crossover.proxy.rlwy.net:27384)."
+    )
 if not STRIPE_SECRET_KEY:
     raise ValueError("STRIPE_SECRET_KEY not set in environment")
+# -------------------------------------------------------------
 
 # Initialize Stripe
 stripe.api_key = STRIPE_SECRET_KEY
@@ -25,22 +31,17 @@ print("✅ Stripe secret key loaded successfully.")
 # MongoDB client
 # -----------------------------
 try:
-    # IMPORTANT: Check for common deployment mistake (using localhost on a remote server)
-    if "localhost" in MONGO_URL or "127.0.0.1" in MONGO_URL:
-        print("⚠️ WARNING: MONGO_URL contains 'localhost' or '127.0.0.1'. This WILL fail on Railway/cloud deployment. Ensure you use a remote connection string!")
-
-    # Attempt to initialize the Motor client
+    # Attempt to initialize the Motor client using the confirmed remote MONGO_URL
     client = AsyncIOMotorClient(MONGO_URL)
     # Use get_default_database(), which relies on the database name being in the URI
     db = client.get_default_database()
     print("✅ MongoDB connected successfully using remote URI.")
 except Exception as e:
-    # Provide a helpful error message for deployment failures
+    # If connection fails (e.g., credentials or network issue), provide details
     raise RuntimeError(
         f"Failed to connect to MongoDB. "
-        f"This usually means the MONGO_URL environment variable is incorrect or points to a non-existent database. "
         f"Original error: {str(e)}. "
-        f"Ensure your MONGO_URL starts with 'mongodb://' or 'mongodb+srv://' and uses credentials for a REMOTE database."
+        f"Double-check the MONGO_URL credentials and network settings on Railway."
     )
 
 # -----------------------------
