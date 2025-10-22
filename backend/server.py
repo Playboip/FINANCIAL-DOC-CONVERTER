@@ -1,102 +1,80 @@
-from fastapi import FastAPI, APIRouter
-from dotenv import load_dotenv
-from starlette.middleware.cors import CORSMiddleware
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
-import logging
-from pathlib import Path
-from pydantic import BaseModel, Field
-from typing import List
-import uuid
-from datetime import datetime
-
-
-ROOT_DIR = Path(__file__).parent
-load_dotenv(ROOT_DIR / '.env')
-
-# MongoDB connection
-mongo_url = mongo_url = "mongodb://mongo:ZVabyQUyjtzAwZVYvRkOhwNSZFXuODYS@mongodb.railway.internal:27017"
-
-client = AsyncIOMotorClient(mongo_url)
-db = client[os.environ[financialdocconverter]]
-
-# Create the main app without a prefix
-app = FastAPI()
-
-# Create a router with the /api prefix
-api_router = APIRouter(prefix="/api")
-
-
-# Define Models
-class StatusCheck(BaseModel):
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    client_name: str
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
-
-class StatusCheckCreate(BaseModel):
-    client_name: str
-
-# Add your routes to the router instead of directly to app
-@api_router.get("/")
-async def root():
-    return {"message": "Hello World"}
-
-@api_router.post("/status", response_model=StatusCheck)
-async def create_status_check(input: StatusCheckCreate):
-    status_dict = input.dict()
-    status_obj = StatusCheck(**status_dict)
-    _ = await db.status_checks.insert_one(status_obj.dict())
-    return status_obj
-
-@api_router.get("/status", response_model=List[StatusCheck])
-async def get_status_checks():
-    status_checks = await db.status_checks.find().to_list(1000)
-    return [StatusCheck(**status_check) for status_check in status_checks]
-
-import io
-from fastapi import UploadFile, File
-from pypdf import PdfReader
-
-@api_router.post("/upload-pdf")
-async def upload_pdf(file: UploadFile = File(...)):
-    try:
-        # Read the PDF file
-        pdf_content = await file.read()
-        pdf_reader = PdfReader(io.BytesIO(pdf_content))
-
-        # Extract text
-        text = ""
-        for page in pdf_reader.pages:
-            text += page.extract_text() or ""
-
-        return {"text": text}
-    except Exception as e:
-        return {"error": str(e)}
-
-# Include the router in the main app
-app.include_router(api_router)
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_credentials=True,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
-
-@app.on_event("shutdown")
-async def shutdown_db_client():
-    client.close()
-import os
 import uvicorn
+import stripe
 
+# -------------------------------
+# Environment Variables
+# -------------------------------
+MONGO_URL = os.getenv(
+    "MONGO_URL",
+    "mongodb://mongo:ZVabyQUyjtzAwZVYvRkOhwNSZFXuODYS@mongodb.railway.internal:27017"
+)
+DB_NAME = os.getenv("DB_NAME", "test_database")
+
+STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY", "sk_test_...")
+STRIPE_SUCCESS_URL = os.getenv("STRIPE_SUCCESS_URL", "https://example.com/success")
+STRIPE_CANCEL_URL = os.getenv("STRIPE_CANCEL_URL", "https://example.com/cancel")
+
+# -------------------------------
+# FastAPI App
+# -------------------------------
+app = FastAPI(title="FastAPI + MongoDB + Stripe on Railway")
+
+# -------------------------------
+# MongoDB Setup
+# -------------------------------
+client = AsyncIOMotorClient(MONGO_URL)
+db = client[DB_NAME]
+
+# -------------------------------
+# Stripe Setup
+# -------------------------------
+stripe.api_key = STRIPE_SECRET_KEY
+
+# -------------------------------
+# Routes
+# -------------------------------
+@app.get("/")
+async def root():
+    return {"message": "Backend running successfully"}
+
+@app.get("/test-mongo")
+async def test_mongo():
+    try:
+        collections = await db.list_collection_names()
+        return {"status": "MongoDB connected", "collections": collections}
+    except Exception as e:
+        return {"status": "Error connecting to MongoDB", "detail": str(e)}
+
+@app.post("/create-checkout-session")
+async def create_checkout_session(request: Request):
+    data = await request.json()
+    try:
+        # Example: expects {"amount": 1000, "currency": "usd"} from frontend
+        session = stripe.checkout.Session.create(
+            payment_method_types=["card"],
+            line_items=[{
+                "price_data": {
+                    "currency": data.get("currency", "usd"),
+                    "product_data": {"name": "Example Product"},
+                    "unit_amount": data.get("amount", 1000),
+                },
+                "quantity": 1,
+            }],
+            mode="payment",
+            success_url=STRIPE_SUCCESS_URL,
+            cancel_url=STRIPE_CANCEL_URL,
+        )
+        return JSONResponse({"id": session.id, "url": session.url})
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=400)
+
+# -------------------------------
+# Dynamic Port for Railway
+# -------------------------------
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 8000))  # Railway sets PORT automatically
+    port = int(os.environ.get("PORT", 8000))
     uvicorn.run("server:app", host="0.0.0.0", port=port)
