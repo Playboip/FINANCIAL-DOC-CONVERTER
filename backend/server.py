@@ -15,7 +15,8 @@ ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
 # MongoDB connection
-mongo_url = mongodb://mongo:ZVabyQUyjtzAwZVYvRkOhwNSZFXuODYS@mongodb.railway.internal:27017]
+mongo_url = mongo_url = "mongodb://mongo:ZVabyQUyjtzAwZVYvRkOhwNSZFXuODYS@mongodb.railway.internal:27017"
+
 client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ[financialdocconverter]]
 
