@@ -1,9 +1,17 @@
 import os
 from fastapi import FastAPI, UploadFile, File, HTTPException
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
 from motor.motor_asyncio import AsyncIOMotorClient
 import stripe
 import shutil
+from docx import Document
+from PyPDF2 import PdfReader, PdfWriter, PdfMerger
+from openpyxl import Workbook
+from ebooklib import epub
+from odf.opendocument import OpenDocumentText
+from odf.text import P
+from pptx import Presentation
+from fpdf import FPDF
 
 # -----------------------------
 # Environment variables
@@ -94,6 +102,168 @@ async def convert_file(file: UploadFile = File(...)):
     converted_path = file_path + ".converted"  # Example
     shutil.copy(file_path, converted_path)
     return {"original": file.filename, "converted_path": converted_path}
+
+@app.post("/convert-to-docx")
+async def convert_to_docx(file: UploadFile = File(...)):
+    file_path = save_file_locally(file)
+    docx_path = file_path + ".docx"
+    document = Document()
+    document.add_paragraph(file.file.read().decode('utf-8'))
+    document.save(docx_path)
+    return FileResponse(docx_path, media_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document', filename=file.filename + ".docx")
+
+@app.post("/convert-to-txt")
+async def convert_to_txt(file: UploadFile = File(...)):
+    file_path = save_file_locally(file)
+    txt_path = file_path + ".txt"
+    with open(txt_path, "w") as f:
+        f.write(file.file.read().decode('utf-8'))
+    return FileResponse(txt_path, media_type='text/plain', filename=file.filename + ".txt")
+
+@app.post("/convert-to-html")
+async def convert_to_html(file: UploadFile = File(...)):
+    file_path = save_file_locally(file)
+    html_path = file_path + ".html"
+    with open(html_path, "w") as f:
+        f.write("<html><body><pre>")
+        f.write(file.file.read().decode('utf-8'))
+        f.write("</pre></body></html>")
+    return FileResponse(html_path, media_type='text/html', filename=file.filename + ".html")
+
+@app.post("/convert-to-odt")
+async def convert_to_odt(file: UploadFile = File(...)):
+    file_path = save_file_locally(file)
+    odt_path = file_path + ".odt"
+    # This is a dummy conversion for now. A real implementation would require a library like odfpy.
+    with open(odt_path, "w") as f:
+        f.write(file.file.read().decode('utf-8'))
+    return FileResponse(odt_path, media_type='application/vnd.oasis.opendocument.text', filename=file.filename + ".odt")
+
+@app.post("/convert-to-rtf")
+async def convert_to_rtf(file: UploadFile = File(...)):
+    file_path = save_file_locally(file)
+    rtf_path = file_path + ".rtf"
+    # This is a dummy conversion for now. A real implementation would require a library like unirtf.
+    with open(rtf_path, "w") as f:
+        f.write(file.file.read().decode('utf-8'))
+    return FileResponse(rtf_path, media_type='application/rtf', filename=file.filename + ".rtf")
+
+@app.post("/merge-pdfs")
+async def merge_pdfs(files: list[UploadFile] = File(...)):
+    merger = PdfMerger()
+    for file in files:
+        file_path = save_file_locally(file)
+        merger.append(file_path)
+    merged_path = "./uploads/merged.pdf"
+    merger.write(merged_path)
+    merger.close()
+    return FileResponse(merged_path, media_type='application/pdf', filename="merged.pdf")
+
+@app.post("/split-pdf")
+async def split_pdf(file: UploadFile = File(...)):
+    file_path = save_file_locally(file)
+    reader = PdfReader(file_path)
+    for i, page in enumerate(reader.pages):
+        writer = PdfWriter()
+        writer.add_page(page)
+        split_path = f"./uploads/split_{i}.pdf"
+        with open(split_path, "wb") as f:
+            writer.write(f)
+    return JSONResponse({"message": "PDF split successfully"})
+
+@app.post("/encrypt-pdf")
+async def encrypt_pdf(file: UploadFile = File(...), password: str = ""):
+    file_path = save_file_locally(file)
+    reader = PdfReader(file_path)
+    writer = PdfWriter()
+    for page in reader.pages:
+        writer.add_page(page)
+    writer.encrypt(password)
+    encrypted_path = file_path + ".encrypted.pdf"
+    with open(encrypted_path, "wb") as f:
+        writer.write(f)
+    return FileResponse(encrypted_path, media_type='application/pdf', filename=file.filename + ".encrypted.pdf")
+
+@app.post("/convert-to-xlsx")
+async def convert_to_xlsx(file: UploadFile = File(...)):
+    file_path = save_file_locally(file)
+    xlsx_path = file_path + ".xlsx"
+    workbook = Workbook()
+    sheet = workbook.active
+    with open(file_path, 'r') as f:
+        for row_idx, line in enumerate(f, 1):
+            for col_idx, cell_value in enumerate(line.strip().split(','), 1):
+                sheet.cell(row=row_idx, column=col_idx, value=cell_value)
+    workbook.save(xlsx_path)
+    return FileResponse(xlsx_path, media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', filename=file.filename + ".xlsx")
+
+@app.post("/convert-to-epub")
+async def convert_to_epub(file: UploadFile = File(...)):
+    file_path = save_file_locally(file)
+    epub_path = file_path + ".epub"
+    book = epub.EpubBook()
+    book.set_title(file.filename)
+    book.set_language('en')
+    c1 = epub.EpubHtml(title='Intro', file_name='chap_01.xhtml', lang='en')
+    c1.content = u'<h1>Intro</h1><p>%s</p>' % file.file.read().decode('utf-8')
+    book.add_item(c1)
+    book.toc = (epub.Link('chap_01.xhtml', 'Intro', 'intro'),)
+    book.add_item(epub.EpubNcx())
+    book.add_item(epub.EpubNav())
+    style = 'BODY {color: white;}'
+    nav_css = epub.EpubItem(uid="style_nav", file_name="style/nav.css", media_type="text/css", content=style)
+    book.add_item(nav_css)
+    book.spine = ['nav', c1]
+    epub.write_epub(epub_path, book, {})
+    return FileResponse(epub_path, media_type='application/epub+zip', filename=file.filename + ".epub")
+
+@app.post("/convert-to-pdf")
+async def convert_to_pdf(file: UploadFile = File(...)):
+    file_path = save_file_locally(file)
+    pdf_path = file_path + ".pdf"
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Arial", size = 12)
+    with open(file_path, "r") as f:
+        for x in f:
+            pdf.cell(200, 10, txt = x, ln = 1, align = 'C')
+    pdf.output(pdf_path)
+    return FileResponse(pdf_path, media_type='application/pdf', filename=file.filename + ".pdf")
+
+@app.post("/convert-to-odp")
+async def convert_to_odp(file: UploadFile = File(...)):
+    file_path = save_file_locally(file)
+    odp_path = file_path + ".odp"
+    # This is a dummy conversion for now. A real implementation would require a library like python-odf.
+    with open(odp_path, "w") as f:
+        f.write(file.file.read().decode('utf-8'))
+    return FileResponse(odp_path, media_type='application/vnd.oasis.opendocument.presentation', filename=file.filename + ".odp")
+
+@app.post("/convert-to-ods")
+async def convert_to_ods(file: UploadFile = File(...)):
+    file_path = save_file_locally(file)
+    ods_path = file_path + ".ods"
+    # This is a dummy conversion for now. A real implementation would require a library like python-odf.
+    with open(ods_path, "w") as f:
+        f.write(file.file.read().decode('utf-8'))
+    return FileResponse(ods_path, media_type='application/vnd.oasis.opendocument.spreadsheet', filename=file.filename + ".ods")
+
+@app.post("/convert-to-pptx")
+async def convert_to_pptx(file: UploadFile = File(...)):
+    file_path = save_file_locally(file)
+    pptx_path = file_path + ".pptx"
+    prs = Presentation()
+    slide_layout = prs.slide_layouts[5]
+    slide = prs.slides.add_slide(slide_layout)
+    title = slide.shapes.title
+    title.text = file.filename
+    with open(file_path, 'r') as f:
+        for line in f:
+            slide = prs.slides.add_slide(prs.slide_layouts[6])
+            p = slide.shapes.add_textbox(1, 1, 1, 1).text_frame.add_paragraph()
+            p.text = line
+    prs.save(pptx_path)
+    return FileResponse(pptx_path, media_type='application/vnd.openxmlformats-officedocument.presentationml.presentation', filename=file.filename + ".pptx")
 
 @app.post("/create-payment-intent")
 async def create_payment_intent(amount: int):

@@ -29,10 +29,15 @@ import PaymentModal from './PaymentModal';
 const FinanceFlowLandingPage = () => {
   const [dragActive, setDragActive] = useState(false);
   const [uploadedFile, setUploadedFile] = useState(null);
+  const [uploadedFiles, setUploadedFiles] = useState([]);
   const [processing, setProcessing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState(null);
   const [showAnalysis, setShowAnalysis] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [showPdfTools, setShowPdfTools] = useState(false);
+  const [pdfTool, setPdfTool] = useState(null);
+  const [password, setPassword] = useState('');
+  const [convertFormat, setConvertFormat] = useState('docx');
   
   // Usage tracking (in real app, this would be stored in localStorage or backend)
   const [dailyUsage, setDailyUsage] = useState(() => {
@@ -103,16 +108,24 @@ const FinanceFlowLandingPage = () => {
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      setUploadedFile(e.dataTransfer.files[0]);
+    if (e.dataTransfer.files) {
+      if (pdfTool === 'merge') {
+        setUploadedFiles([...uploadedFiles, ...e.dataTransfer.files]);
+      } else {
+        setUploadedFile(e.dataTransfer.files[0]);
+      }
       setAnalysisResult(null);
       setShowAnalysis(false);
     }
   };
 
   const handleFileInput = (e) => {
-    if (e.target.files && e.target.files[0]) {
-      setUploadedFile(e.target.files[0]);
+    if (e.target.files) {
+      if (pdfTool === 'merge') {
+        setUploadedFiles([...uploadedFiles, ...e.target.files]);
+      } else {
+        setUploadedFile(e.target.files[0]);
+      }
       setAnalysisResult(null);
       setShowAnalysis(false);
     }
@@ -140,22 +153,23 @@ const FinanceFlowLandingPage = () => {
         return;
       }
 
-      // For demo, convert to first available format
-      const targetFormat = conversions[0];
-      let result;
+      const formData = new FormData();
+      formData.append('file', uploadedFile);
 
-      if (targetFormat.includes('Excel')) {
-        result = await FileProcessor.csvToExcel(uploadedFile);
-      } else if (targetFormat.includes('CSV')) {
-        result = await FileProcessor.excelToCsv(uploadedFile);
-      } else if (targetFormat.includes('JSON')) {
-        result = await FileProcessor.toJson(uploadedFile);
-      } else if (targetFormat.includes('Text')) {
-        result = await FileProcessor.pdfToText(uploadedFile);
-      }
+      const response = await fetch(`/convert-to-${convertFormat}`, {
+        method: 'POST',
+        body: formData,
+      });
 
-      if (result) {
-        FileProcessor.downloadFile(result);
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = uploadedFile.name + '.' + convertFormat;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
         
         // Update usage tracking
         updateUsage('conversion');
@@ -208,6 +222,46 @@ const FinanceFlowLandingPage = () => {
     } catch (error) {
       console.error('Analysis error:', error);
       alert('Analysis failed. Please try again.');
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const handlePdfTool = async () => {
+    setProcessing(true);
+    const formData = new FormData();
+    if (pdfTool === 'merge') {
+      uploadedFiles.forEach(file => formData.append('files', file));
+    } else {
+      formData.append('file', uploadedFile);
+    }
+    if (pdfTool === 'encrypt') {
+      formData.append('password', password);
+    }
+
+    try {
+      const response = await fetch(`/${pdfTool}-pdf`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (response.ok) {
+        if (pdfTool === 'split') {
+          alert('PDF split successfully');
+        } else {
+          const blob = await response.blob();
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `${pdfTool}.pdf`;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+        }
+      }
+    } catch (error) {
+      console.error('PDF tool error:', error);
+      alert('PDF tool failed. Please try again.');
     } finally {
       setProcessing(false);
     }
@@ -371,21 +425,40 @@ const FinanceFlowLandingPage = () => {
               transition={{ duration: 0.8, delay: 1.0 }}
               className="flex flex-col sm:flex-row gap-4 justify-center items-center"
             >
-              <button 
-                onClick={handleConvert}
-                disabled={!uploadedFile || processing}
-                className="group relative px-8 py-4 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 disabled:from-gray-600 disabled:to-gray-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 disabled:scale-100 disabled:cursor-not-allowed flex items-center gap-3"
-              >
-                {hasExceededLimits('conversion') && !processing && <Lock className="w-4 h-4" />}
-                {processing ? <Loader className="w-5 h-5 animate-spin" /> : <Download className="w-5 h-5" />}
-                Convert Document
-                <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
-                {hasExceededLimits('conversion') && (
-                  <span className="absolute -top-2 -right-2 bg-yellow-400 text-black text-xs px-2 py-1 rounded-full">
-                    PRO
-                  </span>
-                )}
-              </button>
+              <div className="flex items-center gap-2">
+                <select
+                  value={convertFormat}
+                  onChange={(e) => setConvertFormat(e.target.value)}
+                  className="px-4 py-4 bg-slate-700 text-white rounded-lg"
+                >
+                  <option value="docx">DOCX</option>
+                  <option value="txt">TXT</option>
+                  <option value="html">HTML</option>
+                  <option value="odt">ODT</option>
+                  <option value="rtf">RTF</option>
+                  <option value="pdf">PDF</option>
+                  <option value="odp">ODP</option>
+                  <option value="ods">ODS</option>
+                  <option value="pptx">PPTX</option>
+                  <option value="xlsx">XLSX</option>
+                  <option value="epub">EPUB</option>
+                </select>
+                <button
+                  onClick={handleConvert}
+                  disabled={!uploadedFile || processing}
+                  className="group relative px-8 py-4 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 disabled:from-gray-600 disabled:to-gray-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 disabled:scale-100 disabled:cursor-not-allowed flex items-center gap-3"
+                >
+                  {hasExceededLimits('conversion') && !processing && <Lock className="w-4 h-4" />}
+                  {processing ? <Loader className="w-5 h-5 animate-spin" /> : <Download className="w-5 h-5" />}
+                  Convert Document
+                  <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+                  {hasExceededLimits('conversion') && (
+                    <span className="absolute -top-2 -right-2 bg-yellow-400 text-black text-xs px-2 py-1 rounded-full">
+                      PRO
+                    </span>
+                  )}
+                </button>
+              </div>
               
               <button 
                 onClick={handleAnalyze}
@@ -475,6 +548,81 @@ const FinanceFlowLandingPage = () => {
         <div className="absolute bottom-20 right-10 w-32 h-32 bg-yellow-500/20 rounded-full blur-xl animate-pulse delay-1000"></div>
       </section>
 
+      {/* PDF Tools Section */}
+      <section className="py-20 bg-slate-800/30">
+        <div className="container mx-auto px-6">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+            className="text-center mb-16"
+          >
+            <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
+              PDF <span className="text-yellow-400">Tools</span>
+            </h2>
+            <p className="text-xl text-gray-300 max-w-2xl mx-auto">
+              Merge, split, and encrypt your PDF documents with ease.
+            </p>
+          </motion.div>
+          <div className="flex justify-center gap-4">
+            <button
+              onClick={() => {
+                setShowPdfTools(true);
+                setPdfTool('merge');
+              }}
+              className="group relative px-8 py-4 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
+            >
+              Merge PDFs
+            </button>
+            <button
+              onClick={() => {
+                setShowPdfTools(true);
+                setPdfTool('split');
+              }}
+              className="group relative px-8 py-4 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
+            >
+              Split PDF
+            </button>
+            <button
+              onClick={() => {
+                setShowPdfTools(true);
+                setPdfTool('encrypt');
+              }}
+              className="group relative px-8 py-4 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
+            >
+              Encrypt PDF
+            </button>
+          </div>
+          {showPdfTools && (
+            <div className="mt-8 max-w-lg mx-auto">
+              <div
+                className={`relative p-8 rounded-2xl border-2 border-dashed transition-all duration-300 backdrop-blur-md border-blue-400/50 bg-white/5`}
+              >
+                {pdfTool === 'encrypt' && (
+                  <div className="flex flex-col gap-4">
+                    <input
+                      type="password"
+                      placeholder="Enter password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="w-full px-4 py-2 rounded-lg bg-slate-700 text-white placeholder-gray-400"
+                    />
+                  </div>
+                )}
+                <button
+                  onClick={handlePdfTool}
+                  className="w-full mt-4 px-8 py-4 bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300"
+                >
+                  {pdfTool === 'merge' && 'Merge PDFs'}
+                  {pdfTool === 'split' && 'Split PDF'}
+                  {pdfTool === 'encrypt' && 'Encrypt PDF'}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </section>
+
       {/* Features Section */}
       <section ref={featuresRef} className="py-20 relative">
         <div className="container mx-auto px-6">
@@ -542,7 +690,7 @@ const FinanceFlowLandingPage = () => {
                 <div className="relative h-64 rounded-t-2xl overflow-hidden">
                   <img 
                     src={feature.image} 
-                    alt={feature.title}
+                    alt={feature.title + " at FinancialDocConverter"}
                     className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 to-transparent"></div>
@@ -669,7 +817,7 @@ const FinanceFlowLandingPage = () => {
                 <div className="flex items-center mb-6">
                   <img 
                     src={testimonial.image} 
-                    alt={testimonial.name}
+                    alt={"Photo of " + testimonial.name + ", " + testimonial.role}
                     className="w-16 h-16 rounded-full object-cover mr-4"
                   />
                   <div>

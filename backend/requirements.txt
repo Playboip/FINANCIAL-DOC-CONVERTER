@@ -5,3 +5,11 @@ stripe
 python-multipart
 aiofiles
 pydantic
+python-docx
+PyPDF2
+pdf-writer
+openpyxl
+EbookLib
+odfpy
+python-pptx
+fpdf
