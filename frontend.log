@@ -1,0 +1,73 @@
+yarn run v1.22.22
+$ craco start
+Starting the development server...
+
+Failed to compile.
+
+[eslint]
+src/utils/fileProcessor.js
+Syntax error: Unexpected reserved word 'static'. (126:2) (126:2)
+ERROR in ./src/utils/fileProcessor.js
+Module build failed (from ./node_modules/babel-loader/lib/index.js):
+SyntaxError: /app/frontend/src/utils/fileProcessor.js: Unexpected reserved word 'static'. (126:2)
+
+  124 |
+  125 |   // Convert PDF to Text
+> 126 |   static pdfToText(pdfFile) {
+      |   ^
+  127 |     return new Promise(async (resolve, reject) => {
+  128 |       try {
+  129 |         const formData = new FormData();
+    at constructor (/app/frontend/node_modules/@babel/parser/lib/index.js:359:19)
+    at FlowParserMixin.raise (/app/frontend/node_modules/@babel/parser/lib/index.js:3266:19)
+    at FlowParserMixin.checkReservedWord (/app/frontend/node_modules/@babel/parser/lib/index.js:11764:12)
+    at FlowParserMixin.parseIdentifierName (/app/frontend/node_modules/@babel/parser/lib/index.js:11744:12)
+    at FlowParserMixin.parseIdentifier (/app/frontend/node_modules/@babel/parser/lib/index.js:11719:23)
+    at FlowParserMixin.parseExprAtom (/app/frontend/node_modules/@babel/parser/lib/index.js:10961:27)
+    at FlowParserMixin.parseExprAtom (/app/frontend/node_modules/@babel/parser/lib/index.js:6818:20)
+    at FlowParserMixin.parseExprSubscripts (/app/frontend/node_modules/@babel/parser/lib/index.js:10619:23)
+    at FlowParserMixin.parseUpdate (/app/frontend/node_modules/@babel/parser/lib/index.js:10604:21)
+    at FlowParserMixin.parseMaybeUnary (/app/frontend/node_modules/@babel/parser/lib/index.js:10584:23)
+    at FlowParserMixin.parseMaybeUnaryOrPrivate (/app/frontend/node_modules/@babel/parser/lib/index.js:10438:61)
+    at FlowParserMixin.parseExprOps (/app/frontend/node_modules/@babel/parser/lib/index.js:10443:23)
+    at FlowParserMixin.parseMaybeConditional (/app/frontend/node_modules/@babel/parser/lib/index.js:10420:23)
+    at FlowParserMixin.parseMaybeAssign (/app/frontend/node_modules/@babel/parser/lib/index.js:10383:21)
+    at FlowParserMixin.parseMaybeAssign (/app/frontend/node_modules/@babel/parser/lib/index.js:5685:18)
+    at FlowParserMixin.parseExpressionBase (/app/frontend/node_modules/@babel/parser/lib/index.js:10337:23)
+    at /app/frontend/node_modules/@babel/parser/lib/index.js:10333:39
+    at FlowParserMixin.allowInAnd (/app/frontend/node_modules/@babel/parser/lib/index.js:11950:16)
+    at FlowParserMixin.parseExpression (/app/frontend/node_modules/@babel/parser/lib/index.js:10333:17)
+    at FlowParserMixin.parseStatementContent (/app/frontend/node_modules/@babel/parser/lib/index.js:12394:23)
+    at FlowParserMixin.parseStatementLike (/app/frontend/node_modules/@babel/parser/lib/index.js:12261:17)
+    at FlowParserMixin.parseStatementLike (/app/frontend/node_modules/@babel/parser/lib/index.js:5054:24)
+    at FlowParserMixin.parseModuleItem (/app/frontend/node_modules/@babel/parser/lib/index.js:12238:17)
+    at FlowParserMixin.parseBlockOrModuleBlockBody (/app/frontend/node_modules/@babel/parser/lib/index.js:12814:36)
+    at FlowParserMixin.parseBlockBody (/app/frontend/node_modules/@babel/parser/lib/index.js:12807:10)
+    at FlowParserMixin.parseProgram (/app/frontend/node_modules/@babel/parser/lib/index.js:12135:10)
+    at FlowParserMixin.parseTopLevel (/app/frontend/node_modules/@babel/parser/lib/index.js:12125:25)
+    at FlowParserMixin.parseTopLevel (/app/frontend/node_modules/@babel/parser/lib/index.js:5821:28)
+    at FlowParserMixin.parse (/app/frontend/node_modules/@babel/parser/lib/index.js:13933:10)
+    at parse (/app/frontend/node_modules/@babel/parser/lib/index.js:13967:38)
+    at parser (/app/frontend/node_modules/@babel/core/lib/parser/index.js:41:34)
+    at parser.next (<anonymous>)
+    at normalizeFile (/app/frontend/node_modules/@babel/core/lib/transformation/normalize-file.js:64:37)
+    at normalizeFile.next (<anonymous>)
+    at run (/app/frontend/node_modules/@babel/core/lib/transformation/index.js:22:50)
+    at run.next (<anonymous>)
+    at transform (/app/frontend/node_modules/@babel/core/lib/transform.js:22:33)
+    at transform.next (<anonymous>)
+    at step (/app/frontend/node_modules/gensync/index.js:261:32)
+    at /app/frontend/node_modules/gensync/index.js:273:13
+    at async.call.result.err.err (/app/frontend/node_modules/gensync/index.js:223:11)
+    at /app/frontend/node_modules/gensync/index.js:189:28
+    at /app/frontend/node_modules/@babel/core/lib/gensync-utils/async.js:67:7
+    at /app/frontend/node_modules/gensync/index.js:113:33
+    at step (/app/frontend/node_modules/gensync/index.js:287:14)
+    at /app/frontend/node_modules/gensync/index.js:273:13
+    at async.call.result.err.err (/app/frontend/node_modules/gensync/index.js:223:11)
+
+ERROR in [eslint]
+src/utils/fileProcessor.js
+  Line 126:2:  Parsing error: Unexpected reserved word 'static'. (126:2)
+
+webpack compiled with 2 errors
