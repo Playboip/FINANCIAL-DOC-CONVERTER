@@ -120,8 +120,37 @@ export class FileProcessor {
 
     return conversions[ext] || [];
   }
-}
 
+  // Convert PDF to Text
+  static pdfToText(pdfFile) {
+    return new Promise(async (resolve, reject) => {
+      try {
+        const formData = new FormData();
+        formData.append('file', pdfFile);
+
+        const response = await fetch('http://localhost:8000/api/upload-pdf', {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!response.ok) {
+          throw new Error('PDF conversion failed');
+        }
+
+        const result = await response.json();
+        const blob = new Blob([result.text], { type: 'text/plain' });
+
+        resolve({
+          blob,
+          filename: pdfFile.name.replace('.pdf', '.txt'),
+          type: 'Text',
+        });
+      } catch (error) {
+        reject(error);
+      }
+    });
+  }
+}
 // AI Analysis Service (calls Netlify Function)
 export class AIAnalysisService {
   static async analyzeDocument(file) {

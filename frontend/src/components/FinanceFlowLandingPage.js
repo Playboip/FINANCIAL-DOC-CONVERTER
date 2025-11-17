@@ -150,6 +150,8 @@ const FinanceFlowLandingPage = () => {
         result = await FileProcessor.excelToCsv(uploadedFile);
       } else if (targetFormat.includes('JSON')) {
         result = await FileProcessor.toJson(uploadedFile);
+      } else if (targetFormat.includes('Text')) {
+        result = await FileProcessor.pdfToText(uploadedFile);
       }
 
       if (result) {
